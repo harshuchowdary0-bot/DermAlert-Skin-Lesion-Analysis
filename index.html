@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DermAlert Framework Analytics Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #131c2e;
+            --border-color: #24334d;
+            --text-main: #f1f5f9;
+            --text-muted: #64748b;
+            --accent-blue: #0ea5e9;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --card-inner: #1e293b;
+        }
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+        .navbar-brand-custom {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #0ea5e9, #6366f1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .card-custom {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+        }
+        .btn-submit-custom {
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            border: none;
+            color: white;
+            padding: 0.85rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-submit-custom:hover {
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+            transform: translateY(-1px);
+        }
+        .metric-label { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-value { font-weight: 700; font-size: 1.3rem; margin-top: 4px; }
+        
+        .triage-card {
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid transparent;
+        }
+        .triage-benign {
+            background: rgba(16, 185, 129, 0.06);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .triage-malignant {
+            background: rgba(239, 68, 68, 0.06);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .triage-title-benign { color: var(--accent-green); font-weight: 700; font-size: 1.1rem; }
+        .triage-title-malignant { color: var(--accent-red); font-weight: 700; font-size: 1.1rem; }
+        .triage-body { color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; margin-top: 0.5rem; }
+
+        .matrix-frame {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            background-color: #070a12;
+        }
+        .matrix-frame img { width: 100%; display: block; height: auto; transition: transform 0.2s; }
+        .matrix-frame:hover img { transform: scale(1.02); }
+        .matrix-label {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(to top, rgba(11, 15, 25, 1) 80%, rgba(11, 15, 25, 0));
+            padding: 0.8rem 0.5rem 0.5rem 0.5rem; font-size: 0.85rem; font-weight: 600; text-align: center;
+        }
+        
+        /* Interactive Drag/Drop & Preview Area */
+        .file-input-wrapper {
+            position: relative; border: 2px dashed var(--border-color); border-radius: 12px;
+            padding: 2.5rem 1rem; text-align: center; background-color: rgba(7, 10, 18, 0.4);
+            transition: all 0.2s ease;
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .file-input-wrapper:hover { border-color: var(--accent-blue); }
+        .file-input-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10; }
+        
+        #preview-container {
+            width: 100%;
+            height: 100%;
+            display: none;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 5;
+            background-color: #070a12;
+        }
+        #preview-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .change-photo-overlay {
+            position: absolute;
+            bottom: 8px; right: 8px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+            font-weight: 600;
+            pointer-events: none;
+            z-index: 6;
+        }
+    </style>
+</head>
+<body class="py-4">
+    <nav class="navbar navbar-expand-lg mb-4 border-bottom border-dark">
+        <div class="container">
+            <span class="navbar-brand-custom"><i class="fa-solid fa-microscope me-2"></i>DermAlert Framework</span>
+            <span class="badge bg-dark text-info px-3 py-2 rounded-pill font-monospace" style="border: 1px solid var(--border-color);">v2.5 (GLCM Pipeline)</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="card card-custom p-4 shadow-sm h-100">
+                    <div class="border-bottom border-secondary pb-3 mb-4">
+                        <h4 class="fw-bold m-0 text-info"><i class="fa-solid fa-terminal me-2"></i>Diagnostic Console</h4>
+                        <p class="text-muted small mt-2 mb-0">Submit 1:1 square micro-cropped lesion metrics to isolate spatial features and pixel arrays.</p>
+                    </div>
+                    
+                    <form method="POST" enctype="multipart/form-data" class="d-flex flex-column h-100 justify-content-between">
+                        <div class="file-input-wrapper mb-4" id="drop-zone">
+                            <div id="upload-prompt">
+                                <i class="fa-solid fa-cloud-arrow-up fa-3x text-info mb-3 d-block"></i>
+                                <span class="text-light d-block fw-semibold mb-1">Select Target Metric File</span>
+                                <span class="text-muted small">Drop files here or click to browse</span>
+                            </div>
+                            
+                            <div id="preview-container">
+                                <img id="preview-img" src="#" alt="Preview Container Matrix">
+                                <div class="change-photo-overlay"><i class="fa-solid fa-rotate me-1"></i> Change Image</div>
+                            </div>
+                            
+                            <input type="file" name="file" id="file-selector" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-submit-custom w-100 py-3"><i class="fa-solid fa-play me-2"></i>Execute Analytics</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card card-custom p-4 shadow-sm h-100">
+                    <div class="border-bottom border-secondary pb-3 mb-4 d-flex justify-content-between align-items-center">
+                        <h4 class="fw-bold m-0 text-info"><i class="fa-solid fa-chart-line me-2"></i>Inference Engine</h4>
+                        {% if deployed %}
+                            <span class="badge bg-dark text-success border border-success px-3 py-2 rounded-pill font-monospace" style="font-size: 0.8rem;"><i class="fa-solid fa-circle-check me-1"></i>System Nominal</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if deployed %}
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="p-3 rounded border" style="background-color: var(--card-inner); border-color: var(--border-color);">
+                                    <div class="metric-label">Classification Target</div>
+                                    <div class="metric-value {% if 'Benign' in condition %}text-success{% else %}text-danger{% endif %}">
+                                        {% if 'Benign' in condition %}<i class="fa-solid fa-circle-check me-2"></i>{% else %}<i class="fa-solid fa-triangle-exclamation me-2"></i>{% endif %}{{ condition }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 rounded border" style="background-color: var(--card-inner); border-color: var(--border-color);">
+                                    <div class="metric-label">Statistical Confidence</div>
+                                    <div class="metric-value text-info"><i class="fa-solid fa-chart-pie me-2"></i>{{ confidence }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="triage-card {% if 'Benign' in condition %}triage-benign{% else %}triage-malignant{% endif %}">
+                            <div class="{% if 'Benign' in condition %}triage-title-benign{% else %}triage-title-malignant{% endif %}">
+                                {% if 'Benign' in condition %}<i class="fa-solid fa-notes-medical me-2"></i>CLINICAL TRIAGE: BENIGN LOGIC VERIFICATION{% else %}<i class="fa-solid fa-radiation me-2"></i>CLINICAL TRIAGE: RISK MATRIX EXCEPTION ALERT{% endif %}
+                            </div>
+                            <div class="triage-body">{{ triage }}</div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 my-auto text-muted">
+                            <i class="fa-solid fa-circle-nodes fa-3x mb-3 d-block opacity-25"></i>
+                            <p class="mb-0">Awaiting diagnostic initialization vector upload...</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if deployed %}
+            <h4 class="mt-5 fw-bold mb-3 text-info"><i class="fa-solid fa-shuffle text-info me-2"></i>Computer Vision Pipeline Transformations</h4>
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card card-custom p-3 shadow-sm">
+                        <div class="matrix-frame">
+                            <img src="/static/uploads/{{ raw_img }}" alt="Raw">
+                            <div class="matrix-label text-light"><i class="fa-solid fa-image me-1"></i> 1. Input Array</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card card-custom p-3 shadow-sm">
+                        <div class="matrix-frame">
+                            <img src="/static/uploads/{{ enhanced_img }}" alt="Enhanced">
+                            <div class="matrix-label text-info"><i class="fa-solid fa-circle-half-stroke me-1"></i> 2. Gamma Balance</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card card-custom p-3 shadow-sm">
+                        <div class="matrix-frame">
+                            <img src="/static/uploads/{{ shaved_img }}" alt="Shaved">
+                            <div class="matrix-label text-success"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> 3. Shaved Matrix</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('file-selector').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview-img').src = e.target.result;
+                    document.getElementById('preview-container').style.display = 'block';
+                    document.getElementById('upload-prompt').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</body>
+</html>
